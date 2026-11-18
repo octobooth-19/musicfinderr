@@ -65,9 +65,5 @@ app.get('/api/preview', async (req, res) => {
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static('dist'));
   app.get('/{*path}', (_req, res) => res.sendFile(`${process.cwd()}/dist/index.html`));
-} else {
-  const { createServer } = await import('vite');
-  const vite = await createServer({ server: { middlewareMode: true, allowedHosts: true }, appType: 'spa' });
-  app.use(vite.middlewares);
 }
-app.listen(port, '0.0.0.0', () => console.log(`Keynote is ready at http://localhost:${port}`));
+app.listen(port, '0.0.0.0', () => console.log(`Keynote ${process.env.NODE_ENV === 'production' ? 'app' : 'API'} is ready at http://localhost:${port}`));

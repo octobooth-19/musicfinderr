@@ -1,0 +1,165 @@
+<div class="app-shell">
+  <aside class="sidebar" [class.is-open]="mobileNav()">
+    <a class="brand" href="/" (click)="$event.preventDefault(); navigate('analyze')">
+      <span class="brand-mark"><svg appIcon="AudioLines" [size]="23"></svg></span>keynote<span class="brand-dot">.</span>
+    </a>
+    <div class="workspace-label">YOUR WORKSPACE</div>
+    <nav class="main-nav" aria-label="Main navigation">
+      <button [class.active]="view() === 'analyze'" (click)="navigate('analyze')"><svg appIcon="AudioLines" [size]="19"></svg>Song analyzer<span class="nav-active-dot"></span></button>
+      <button [class.active]="view() === 'library'" (click)="navigate('library')"><svg appIcon="Bookmark" [size]="18"></svg>My library @if (library().length) { <span class="nav-count">{{ library().length }}</span> }</button>
+      <button [class.active]="view() === 'history'" (click)="navigate('history')"><svg appIcon="Clock3" [size]="18"></svg>Recent analyses</button>
+    </nav>
+    <div class="sidebar-collection">
+      <div class="collection-heading">A LITTLE INSPIRATION <svg appIcon="Sparkles" [size]="13"></svg></div>
+      <button class="demo-link" (click)="loadTrack(demo)"><span class="tiny-album"><svg appIcon="Disc3" [size]="16"></svg></span><span>Start with a classic<small>Explore a sample analysis</small></span><svg appIcon="ArrowUpRight" [size]="14"></svg></button>
+    </div>
+    <div class="sidebar-bottom">
+      <div class="made-for">
+        <span class="headphone-bubble"><svg appIcon="Headphones" [size]="20"></svg></span>
+        <h3>Less guessing.<br />More playing.</h3><p>Your next musical lightbulb<br />moment starts here.</p>
+        <span class="mini-soundwave">@for (height of waveHeights; track $index) { <i [style.height.px]="height"></i> }</span>
+      </div>
+      <button class="bottom-link" (click)="openModal('help')"><svg appIcon="CircleHelp" [size]="18"></svg>How it works<svg appIcon="ArrowUpRight" [size]="14"></svg></button>
+      <div class="profile"><div class="avatar">J</div><div>Just you &amp; the music<small>Personal workspace</small></div><button class="profile-settings icon-button" aria-label="Playback settings" (click)="openModal('settings')"><svg appIcon="Settings2" [size]="17"></svg></button></div>
+    </div>
+  </aside>
+  @if (mobileNav()) { <button class="sidebar-overlay" aria-label="Close navigation" (click)="mobileNav.set(false)"></button> }
+  <main>
+    <header class="topbar">
+      <div class="breadcrumb"><button class="mobile-menu icon-button" aria-label="Open navigation" (click)="mobileNav.set(true)"><svg appIcon="Menu" [size]="21"></svg></button><span>Workspace</span><svg appIcon="ChevronRight" [size]="14"></svg><strong>{{ view() === 'analyze' ? 'Song analyzer' : view() === 'library' ? 'My library' : 'Recent analyses' }}</strong></div>
+      <div class="topbar-right"><span class="status-dot"></span>A little theory. A lot of possibility.<button class="help-button" aria-label="About Keynote" (click)="openModal('help')"><svg appIcon="CircleHelp" [size]="18"></svg></button></div>
+    </header>
+    <div class="page-content">
+      @if (view() === 'analyze') {
+        <section class="intro"><div class="eyebrow"><span></span>TUNE IN TO WHAT’S UNDERNEATH</div><h1>Every song has a <span>little secret.</span></h1><p>Find its key. Uncover the chords. Make it your own.</p></section>
+        <section class="intake-card">
+          <div class="input-tabs">
+            <button [class.selected]="inputMode() === 'link'" (click)="setInputMode('link')"><svg appIcon="Link2" [size]="16"></svg>Paste a song link</button>
+            <button [class.selected]="inputMode() === 'upload'" (click)="setInputMode('upload')"><svg appIcon="Upload" [size]="15"></svg>Upload audio</button>
+            <span class="private-note"><span class="status-dot"></span>No sign-up. Just music.</span>
+          </div>
+          @if (inputMode() === 'link') {
+            <form (submit)="handleLink($event)">
+              <div class="link-field" [class.has-error]="error()">
+                <svg appIcon="Link2" [size]="20"></svg>
+                <input #linkInput name="songUrl" type="text" aria-label="YouTube or Spotify song link" placeholder="Drop a YouTube or Spotify link here…" [ngModel]="url()" (ngModelChange)="updateUrl($event)" [disabled]="!!busy()" />
+                <span class="keyboard-hint"><svg appIcon="Command" [size]="11"></svg> K</span>
+                <button class="primary-button analyze-button" type="submit" [disabled]="!!busy() || !url().trim()">
+                  @if (busy()) { <svg appIcon="LoaderCircle" [size]="16" class="spin"></svg>Analyzing }
+                  @else { Find my key<svg appIcon="ArrowRight" [size]="17"></svg> }
+                </button>
+              </div>
+              <div class="input-footer"><span>Good music starts with a little curiosity.</span><div class="provider-label youtube"><svg appIcon="YouTube" [size]="15"></svg>YouTube</div><div class="provider-label spotify"><svg appIcon="Spotify" [size]="14"></svg>Spotify</div></div>
+            </form>
+          } @else {
+            <button class="upload-zone" [disabled]="!!busy()" (click)="openFilePicker()" (dragover)="$event.preventDefault()" (drop)="onDrop($event)">
+              <span class="upload-circle"><svg appIcon="Upload" [size]="20"></svg></span><strong>Drop your track here, or <em>browse files</em></strong><span>MP3, WAV, M4A, OGG or FLAC · Up to 40 MB · Analyzed on your device</span>
+            </button>
+          }
+          <input #fileInput hidden type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.flac,.aac" (change)="onFileChange($event)" />
+          @if (busy()) { <div class="analysis-progress" role="status"><svg appIcon="LoaderCircle" [size]="14" class="spin"></svg>{{ busy() }}<span>Listening for the little details</span></div> }
+          @if (error()) { <div class="error-message" role="alert"><svg appIcon="Info" [size]="16"></svg>{{ error() }}</div> }
+          @if (pending(); as pendingTrack) {
+            <div class="pending-track"><svg appIcon="Music2" [size]="22"></svg><div><strong>{{ pendingTrack.title }}</strong><p>Track found. A playable preview isn’t available. Upload audio you have permission to use to analyze this recording.</p></div><button class="secondary-button" (click)="openFilePicker()" [disabled]="!!busy()"><svg appIcon="Upload" [size]="15"></svg>Add audio</button></div>
+          }
+        </section>
+
+        <div class="section-title"><h2>Your song, <span>decoded.</span></h2><span class="example-tag"><span></span>{{ track().source === 'demo' ? 'EXAMPLE ANALYSIS' : track().source === 'preview' ? 'PREVIEW ANALYSIS' : 'AUDIO ANALYSIS' }}</span></div>
+        <section class="result-overview">
+          <div class="track-info"><app-album-art [artwork]="track().artwork" /><div class="track-copy">
+            <span class="track-source">
+              @if (track().source === 'demo') { <svg appIcon="Spotify" [size]="13"></svg>THE CLASSICS COLLECTION }
+              @else if (track().source === 'preview') { <svg appIcon="Headphones" [size]="13"></svg>30-SECOND PREVIEW }
+              @else { <svg appIcon="AudioLines" [size]="13"></svg>YOUR AUDIO }
+            </span>
+            <h2>{{ track().title }}</h2><p>{{ track().artist }}</p>
+            <small>{{ track().album ? track().album + ' · ' + track().year : formatTime(track().fullDuration) + ' · ' + (track().source === 'preview' ? 'Matched preview' : 'Local analysis') }}</small>
+          </div></div>
+          <div class="overview-right"><span class="complete-tag"><svg appIcon="CheckCircle2" [size]="13"></svg>{{ track().source === 'demo' ? 'Ready to explore' : 'Analysis complete' }}</span><button class="secondary-button save-button" [class.saved]="isSaved()" [attr.aria-label]="isSaved() ? 'Remove from library' : 'Save to library'" (click)="saveTrack()"><svg [appIcon]="isSaved() ? 'Check' : 'Bookmark'" [size]="15"></svg><span>{{ isSaved() ? 'Saved to library' : 'Save to library' }}</span></button></div>
+        </section>
+        @if (track().source === 'preview') {
+          <div class="preview-disclaimer"><svg appIcon="Info" [size]="14"></svg><p>Analyzed a matched 30-second preview. It may be a different version from your link.</p><a [href]="track().sourceUrl" target="_blank" rel="noreferrer">Original track<svg appIcon="ExternalLink" [size]="12"></svg></a></div>
+        }
+        <section class="metrics-grid">
+          <div class="metric key-metric"><div class="metric-label"><span><svg appIcon="Music2" [size]="15"></svg>MUSICAL KEY</span><svg appIcon="Info" [size]="14"></svg></div><div class="key-value">{{ notes[currentKey()] }} <span>{{ track().mode }}</span><span class="key-note" aria-hidden="true">♮</span></div><div class="key-caption"><span class="coral-dot"></span>{{ transpose() ? 'Transposed ' + (transpose() > 0 ? '+' : '') + transpose() + ' semitones' : 'The heart of your song' }}</div></div>
+          <div class="metric"><div class="metric-label"><span><svg appIcon="AudioLines" [size]="15"></svg>TEMPO</span></div><div class="metric-value">{{ track().bpm || '—' }}<span>BPM</span></div><div class="metric-caption">{{ track().bpm ? 'A steady, easy-going groove' : 'Tempo not estimated' }}</div></div>
+          <div class="metric"><div class="metric-label"><span><svg appIcon="Clock3" [size]="15"></svg>TIME SIGNATURE</span></div><div class="metric-value">{{ track().meter || '—' }}<span>{{ track().meter ? 'time' : '' }}</span></div><div class="metric-caption">{{ track().meter ? 'Four beats. Endless possibilities.' : 'Listen for the beat' }}</div></div>
+          <div class="metric confidence-metric"><div class="metric-label"><span><svg appIcon="Sparkles" [size]="15"></svg>{{ track().source === 'demo' ? 'ILLUSTRATIVE RESULT' : 'KEY PROFILE MATCH' }}</span></div><div class="metric-value">{{ track().confidence }}<span>%</span><span class="confidence-status">{{ track().confidence >= 80 ? 'Strong match' : 'Best estimate' }}</span></div><div class="confidence-track"><span [style.width.%]="track().confidence"></span></div><div class="metric-caption">{{ track().source === 'demo' ? 'Curated demo · not a live analysis' : 'Tonal fit, not a certainty score' }}</div></div>
+        </section>
+
+        <section class="chord-section panel">
+          <div class="panel-heading"><div><h2>Follow the progression<span class="tiny-badge">{{ track().chords.length }} chords</span></h2><p>The building blocks of the song. Click a chord to hear it.</p></div><button class="text-button export-button" aria-label="Export chords" (click)="exportTrack()"><svg appIcon="Download" [size]="15"></svg><span>Export chords</span></button></div>
+          <div class="progression-toolbar">
+            <div class="segmented-control"><button [class.active]="instrument() === 'piano'" (click)="setInstrument('piano')"><svg appIcon="Piano" [size]="15"></svg>Piano</button><button [class.active]="instrument() === 'guitar'" (click)="setInstrument('guitar')"><svg appIcon="Guitar" [size]="15"></svg>Guitar</button></div>
+            <div class="transpose"><span>Transpose</span><div class="stepper"><button aria-label="Transpose down" [disabled]="transpose() <= -6" (click)="setTranspose(transpose() - 1)"><svg appIcon="Minus" [size]="13"></svg></button><span>{{ transpose() > 0 ? '+' : '' }}{{ transpose() }}</span><button aria-label="Transpose up" [disabled]="transpose() >= 6" (click)="setTranspose(transpose() + 1)"><svg appIcon="Plus" [size]="13"></svg></button></div><span class="semitone-label">semitones</span>@if (transpose() !== 0) { <button class="reset-transpose" (click)="setTranspose(0)">Reset</button> }</div>
+          </div>
+          <div class="chord-grid" [class.many-chords]="track().chords.length > 8">
+            @for (chord of track().chords; track $index; let i = $index) {
+              <button class="chord-card" [class.active]="selected() === i" (click)="chooseChord(i)" [attr.aria-label]="'Play ' + chordName(chord, transpose()) + ' chord ' + (i + 1)">
+                <span class="chord-index">{{ i + 1 < 10 ? '0' : '' }}{{ i + 1 }}@if (selected() === i) { <span class="chord-playing" [class.animated]="playing()"><i></i><i></i><i></i></span> }</span>
+                <strong>{{ chordName(chord, transpose()) }}</strong><span class="chord-roman">{{ romanNumeral(chord, track().key, track().mode) }}</span>
+                <div class="chord-bottom"><span>{{ track().source === 'demo' ? '1 bar' : chord.duration.toFixed(0) + 's' }}</span><span class="chord-preview"><svg appIcon="Play" [size]="9"></svg></span></div>
+              </button>
+            }
+          </div>
+          <div class="timeline"><div class="timeline-top"><span>{{ formatTime(position()) }}</span><span>{{ track().source === 'demo' ? 'Illustrative chorus · 8 bars' : track().duration.toFixed(0) + ' seconds analyzed' }}</span><span>{{ formatTime(track().duration) }}</span></div><input type="range" min="0" [max]="timelineMax()" step="0.1" [ngModel]="position()" (ngModelChange)="seek(+$event)" aria-label="Progression playback position" [style.--progress]="position() / track().duration * 100 + '%'" /></div>
+          <div class="player-controls">
+            <div class="synth-label"><span class="status-dot"></span>{{ instrument() === 'piano' ? 'Soft piano' : 'Acoustic synth' }}<span class="synth-label-extra">· Chord preview</span></div>
+            <div class="transport"><button class="icon-button loop-button" [class.enabled]="loop()" [attr.aria-label]="loop() ? 'Disable loop' : 'Enable loop'" [attr.aria-pressed]="loop()" (click)="loop.set(!loop())"><svg appIcon="Repeat2" [size]="17"></svg></button><button class="icon-button" aria-label="Restart progression" (click)="restart()"><svg appIcon="SkipBack" [size]="17"></svg></button><button class="play-button" [class.is-playing]="playing()" [attr.aria-label]="playing() ? 'Pause progression' : 'Play progression'" (click)="togglePlayback()"><svg [appIcon]="playing() ? 'Pause' : 'Play'" [size]="18"></svg></button><span class="play-label">{{ playing() ? 'Pause progression' : 'Play progression' }}</span></div>
+            <div class="volume-control"><button class="icon-button" [attr.aria-label]="volume() ? 'Mute' : 'Unmute'" (click)="setVolume(volume() ? 0 : 0.55)"><svg [appIcon]="volume() ? 'Volume2' : 'VolumeX'" [size]="17"></svg></button><input type="range" min="0" max="1" step="0.01" [ngModel]="volume()" aria-label="Volume" (ngModelChange)="setVolume(+$event)" /></div>
+          </div>
+        </section>
+
+        <div class="bottom-grid">
+          <section class="scale-panel panel"><div class="panel-heading"><div><h2>A little key context</h2><p>Meet the notes that feel right at home.</p></div><span class="scale-key">{{ notes[currentKey()] }} {{ track().mode }}</span></div>
+            <div class="scale-notes">@for (step of scaleSteps(); track step; let i = $index) { <button (click)="previewNote(60 + currentKey() + step)" [attr.aria-label]="'Hear ' + notes[(currentKey() + step) % 12]"><span [class.root-note]="i === 0">{{ notes[(currentKey() + step) % 12] }}</span><small>{{ i + 1 }}</small></button> }</div>
+            <div class="context-tip"><span class="small-sparkle"><svg appIcon="Sparkles" [size]="14"></svg></span><p>@if (track().source === 'demo') { That dreamy feeling? It’s the <strong>{{ chordName(track().chords[0], transpose()) }}–{{ chordName(track().chords[1], transpose()) }} loop</strong>, floating between two major chords. } @else { Try landing on <strong>{{ notes[currentKey()] }}</strong> when you improvise. It’s your musical home base. }</p></div>
+          </section>
+          <section class="explore-panel"><span class="explore-decoration">♬</span><span class="eyebrow">FROM LISTENING TO PLAYING</span><h2>Don’t just hear it.<br />Get your hands on it.</h2><p>{{ instrument() === 'piano' ? 'See how the chords come together on the keys.' : 'Explore the notes that make up each chord.' }}</p><button (click)="openModal('instrument')">Explore on {{ instrument() === 'piano' ? 'piano' : 'guitar' }}<svg appIcon="ArrowUpRight" [size]="17"></svg></button></section>
+        </div>
+        <footer class="page-footer"><span><svg appIcon="AudioLines" [size]="14"></svg>Made for the way you hear music.</span><span>{{ track().source === 'demo' ? 'Sample results are illustrative. Upload audio for a real analysis.' : 'Estimates can vary with recordings. Trust your ears, too.' }}<span class="footer-flower">✳</span></span></footer>
+      } @else {
+        <section class="library-page">
+          <div class="eyebrow"><span></span>YOUR MUSICAL NOTEBOOK</div><h1>{{ view() === 'library' ? 'Good finds. Kept close.' : 'Where your ears have been.' }}</h1><p>{{ view() === 'library' ? 'All your saved discoveries, ready for another listen.' : 'The tracks you’ve explored in this session.' }}</p>
+          <div class="library-toolbar"><div><svg appIcon="Search" [size]="17"></svg><input aria-label="Search tracks" placeholder="Find a song or artist…" [ngModel]="librarySearch()" (ngModelChange)="librarySearch.set($event)" /></div><button class="primary-button" (click)="navigate('analyze')"><svg appIcon="Plus" [size]="16"></svg>New analysis</button></div>
+          @if (visibleTracks().length === 0) {
+            <div class="empty-library"><span><svg appIcon="Bookmark" [size]="31"></svg></span><h2>{{ view() === 'library' ? 'Your next favorite starts here.' : 'A fresh pair of ears.' }}</h2><p>{{ view() === 'library' ? 'Save a song from the analyzer and it’ll be waiting right here.' : 'Analyze a link or upload audio to start your listening history.' }}</p><button class="secondary-button" (click)="navigate('analyze')">Explore a song<svg appIcon="ArrowRight" [size]="16"></svg></button></div>
+          } @else {
+            <div class="saved-tracks">@for (savedTrack of filteredTracks(); track savedTrack.id) { <button (click)="loadTrack(savedTrack)"><app-album-art [small]="true" [artwork]="savedTrack.artwork" /><span><strong>{{ savedTrack.title }}</strong><small>{{ savedTrack.artist }}</small></span><span class="saved-key">{{ notes[savedTrack.key] }} {{ savedTrack.mode }}</span><svg appIcon="ChevronRight" [size]="18"></svg></button> } @empty { <p class="no-results">No tracks match “{{ librarySearch() }}”.</p> }</div>
+          }
+        </section>
+      }
+    </div>
+  </main>
+  @if (toast()) { <div class="toast" role="status"><svg appIcon="CheckCircle2" [size]="18"></svg>{{ toast() }}<button aria-label="Dismiss notification" (click)="toast.set('')"><svg appIcon="X" [size]="15"></svg></button></div> }
+  @if (modal()) {
+    <div class="modal-backdrop" (click)="closeModal()">
+      <section class="modal" [class.instrument-modal]="modal() === 'instrument'" role="dialog" aria-modal="true" [attr.aria-label]="modal() === 'help' ? 'How Keynote works' : modal() === 'settings' ? 'Playback settings' : 'Explore chords'" (click)="$event.stopPropagation()">
+        <button class="modal-close icon-button" aria-label="Close dialog" (click)="closeModal()"><svg appIcon="X" [size]="20"></svg></button>
+        @if (modal() === 'help') {
+          <span class="modal-icon"><svg appIcon="AudioLines" [size]="27"></svg></span><div class="eyebrow">A LITTLE THEORY. A LOT OF POSSIBILITY.</div><h2>Meet your song’s other side.</h2><p>Keynote turns your musical curiosity into something you can play.</p>
+          <div class="help-steps">
+            <div><span>01</span><div><h3>Bring a song</h3><p>Paste a YouTube or Spotify track link. When available, we find a matching 30-second audio preview. Or upload your own audio, analyzed privately in your browser.</p></div></div>
+            <div><span>02</span><div><h3>Find the musical fingerprint</h3><p>We estimate the key and chord changes from the audio’s pitch content. The first 90 seconds of uploads are analyzed. Tempo and meter are shown only in the curated demo.</p></div></div>
+            <div><span>03</span><div><h3>Make it yours</h3><p>Click chords, loop the synth progression, change instruments, or transpose to a key that suits you. Save your discoveries locally or export a chord sheet.</p></div></div>
+          </div>
+          <div class="modal-note"><svg appIcon="Info" [size]="17"></svg><p>Streaming links don’t grant full audio access. Preview matches may be different versions. Automated key and chord estimates can be imperfect, especially for complex recordings.</p></div><button class="primary-button modal-primary" (click)="closeModal()">Let’s make some music<svg appIcon="ArrowRight" [size]="17"></svg></button>
+        } @else if (modal() === 'settings') {
+          <span class="modal-icon"><svg appIcon="SlidersHorizontal" [size]="27"></svg></span><h2>Your sound, your setup.</h2><p>Fine-tune the chord preview. Everything stays on your device.</p>
+          <label class="settings-row">Preview volume<input type="range" aria-label="Preview volume" min="0" max="1" step=".01" [ngModel]="volume()" (ngModelChange)="setVolume(+$event)" /><span>{{ (volume() * 100).toFixed(0) }}%</span></label>
+          <div class="settings-row">Instrument<div class="segmented-control"><button [class.active]="instrument() === 'piano'" (click)="setInstrument('piano')">Piano</button><button [class.active]="instrument() === 'guitar'" (click)="setInstrument('guitar')">Guitar</button></div></div>
+          <label class="settings-row">Loop progression<input type="checkbox" [ngModel]="loop()" (ngModelChange)="loop.set($event)" /></label><p class="settings-privacy">Your saved library is stored in this browser, not in an account.</p>
+        } @else {
+          <div class="eyebrow">GET YOUR HANDS ON IT</div><h2>A closer look at <span class="coral-text">{{ chordName(activeChord(), transpose()) }}</span>.</h2><p>{{ activeNoteNames() }}<span class="modal-chord-kind">{{ activeChord().quality }} triad</span></p>
+          <div class="modal-chord-picker">@for (chord of uniqueChords(); track $index) { <button [class.active]="chord.root === activeChord().root && chord.quality === activeChord().quality" (click)="chooseUniqueChord(chord)">{{ chordName(chord, transpose()) }}</button> }</div>
+          @if (instrument() === 'piano') {
+            <div class="piano-keyboard">@for (note of keyboard; track note) { <button [class.black-key]="isBlackKey(note)" [class.white-key]="!isBlackKey(note)" [class.lit]="activeNotes().includes(note % 12)" [attr.aria-label]="'Play ' + notes[note % 12] + ' octave ' + octave(note)" (click)="previewNote(60 + note)"><span>{{ notes[note % 12] }}</span></button> }</div>
+          } @else {
+            <div class="guitar-fretboard">@for (open of guitarStrings; track $index; let string = $index) { <div class="guitar-string"><span>{{ notes[open % 12] }}</span>@for (fret of frets; track fret) { <button [attr.aria-label]="'String ' + (string + 1) + ' fret ' + fret + ': ' + notes[(open + fret) % 12]" [class.lit]="activeNotes().includes((open + fret) % 12)" (click)="previewNote(open + fret)"><span>{{ notes[(open + fret) % 12] }}</span></button> }</div> }</div>
+          }
+          <button class="primary-button modal-primary" (click)="previewActiveChord()"><svg appIcon="Play" [size]="16"></svg>Hear {{ chordName(activeChord(), transpose()) }}</button><div class="modal-note"><svg appIcon="Info" [size]="16"></svg><p>{{ instrument() === 'piano' ? 'Highlighted keys are the notes in this chord. Tap any key to explore.' : 'Highlighted notes belong to this chord. Tap to hear each note. This is a note map, not a fingering diagram.' }}</p></div>
+        }
+      </section>
+    </div>
+  }
+</div>

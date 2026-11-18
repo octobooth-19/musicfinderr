@@ -2,20 +2,26 @@
 
 An interactive music workspace for finding a song's key, exploring estimated chords, and playing or transposing a progression.
 
+Built with **Angular 22**, standalone TypeScript components, signals, Angular Forms, and the Angular CLI. Express provides the streaming-link API; Web Audio handles analysis and synthesized playback. No React runtime is used.
+
 ## Run
+
+Use Node.js 22.22.3+, 24.15.0+, or 26+ (see `package.json` for the supported ranges).
 
 ```sh
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. Set `PORT` to use another port.
+Open `http://localhost:3000`. Development runs the Angular dev server on port 3000 and the Express API on port 3001, with `/api` proxied to Express.
 
 ```sh
 npm test
 npm run build
 npm start
 ```
+
+`npm run build` performs strict TypeScript and Angular template checks, then creates the production app in `dist/`. `npm start` serves both the app and API on port 3000; set `PORT` to change the production port. The `npm test` command exercises the shared, framework-independent analysis and link-parsing modules.
 
 ## Audio and streaming links
 
