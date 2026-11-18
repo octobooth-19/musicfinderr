@@ -32,3 +32,7 @@ npm start
 - The initial Dreams screen is a curated, illustrative demo, not a live recording analysis. Its playback is synthesized chord audio, not the copyrighted song.
 - Playback uses Web Audio synthesis. Guitar mode is a plucked-style synth with an interactive fretboard note map, not a fingering chart.
 - Saved tracks use browser local storage. No account or API credentials are required.
+
+## Credits
+
+sarah john
